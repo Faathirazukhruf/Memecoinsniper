@@ -1,0 +1,113 @@
+# Personal Multi-Chain Memecoin Hunting Engine (`Memecoinsniper`)
+
+> **A high-speed, data-driven personal trading intelligence terminal for Solana, BSC, and Base.**
+
+![Terminal Overview](https://img.shields.io/badge/Architecture-Clean%20Monorepo-blue)
+![TypeScript](https://img.shields.io/badge/Language-TypeScript%20Strict-green)
+![Execution](https://img.shields.io/badge/Trading-100%25%20Manual%20(No%20Keys%20Stored)-brightgreen)
+![Chains](https://img.shields.io/badge/Chains-Solana%20%7C%20BSC%20%7C%20Base-purple)
+
+---
+
+## 🎯 Product Vision & Philosophy
+
+**Memecoinsniper** is a personal hunting terminal designed to reduce thousands of raw blockchain events per minute into a handful of high-probability opportunities that deserve human trading attention.
+
+```
+COVER THE MARKET → FILTER THE GARBAGE → FIND SMART MONEY → DETECT MOMENTUM → RANK OPPORTUNITIES → MOVE FAST → RECORD EVERYTHING → LEARN FROM RESULTS
+```
+
+### Core Tenets:
+1. **No Overengineering:** Single engine process + Supabase database + Next.js terminal + Telegram alert bot. No microservices, Kafka, or Kubernetes.
+2. **Deterministic Mathematical Scoring:** 0–100 Opportunity Score with transparent point breakdowns and plain-English reasoning. No black-box AI.
+3. **100% Manual Execution (V1):** The engine does NOT store private keys or execute automated swaps. It prepares deep-links for operator review and signing.
+4. **Smart Wallet Confluence:** Tracks alpha traders and detects coordinated smart-money accumulations.
+5. **Rigorous Security Filtering:** Evaluates honeypots, mint/freeze authorities, buy/sell taxes, LP locks, and holder concentration.
+
+---
+
+## 🏗️ Architecture Summary
+
+```
+                      Multi-Chain Blockchains
+                      (Solana, BSC, Base)
+                               │ RPC / WS
+                               ▼
+                        Chain Adapters
+                               │ Normalized Events
+                               ▼
+               ┌───────────────┴───────────────┐
+               ▼                               ▼
+       New Launch Radar               Smart Wallet Radar
+               └───────────────┬───────────────┘
+                               ▼
+                     Security / Risk Engine
+                               ▼
+                      Market Intelligence
+                               ▼
+                     Opportunity Scoring
+                               │
+               ┌───────────────┴───────────────┐
+               ▼                               ▼
+       Supabase Database               Telegram Alerts
+               │
+               ▼
+     Next.js Web Cockpit
+```
+
+---
+
+## 📂 Monorepo Structure
+
+```
+├── packages/
+│   ├── shared/         # Common TypeScript types, mathematical scoring, security rules, wallet metrics
+│   ├── engine/         # Blockchain adapters (Solana, BSC, Base), radars, scoring, DB persistence, Telegram bot
+│   └── web/            # Next.js 14+ dark terminal cockpit (Dashboard, Screener, Detail, Wallets, Journal, Analytics)
+├── tests/              # Vitest test suites (scoring, security, wallet metrics, normalization)
+└── docs/               # In-depth architectural and operational documentation
+```
+
+---
+
+## 🚀 Quick Start (Local Development)
+
+### 1. Install Dependencies
+```bash
+pnpm install
+```
+
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+### 3. Run Development Suite
+Run both the engine background worker and the Next.js frontend in parallel:
+```bash
+pnpm dev
+```
+
+- **Frontend Cockpit:** [http://localhost:3000](http://localhost:3000)
+- **Engine Stream & API:** [http://localhost:3001](http://localhost:3001)
+
+### 4. Run Automated Test Suite
+```bash
+pnpm test
+```
+
+---
+
+## 📚 Complete Documentation Suite
+
+- [ARCHITECTURE.md](file:///c:/Users/faath/Memecoinsniper/ARCHITECTURE.md) — System design, dataflow pipelines, process model.
+- [SETUP.md](file:///c:/Users/faath/Memecoinsniper/SETUP.md) — Step-by-step local development and environment setup guide.
+- [DEPLOYMENT.md](file:///c:/Users/faath/Memecoinsniper/DEPLOYMENT.md) — Free/low-cost deployment strategies (Vercel, Supabase, VPS worker).
+- [DATABASE.md](file:///c:/Users/faath/Memecoinsniper/DATABASE.md) — PostgreSQL schema, migrations, indices, and data lifecycle.
+- [CHAINS.md](file:///c:/Users/faath/Memecoinsniper/CHAINS.md) — Multi-chain adapter specifications for Solana, BSC, Base.
+- [WALLET_INTELLIGENCE.md](file:///c:/Users/faath/Memecoinsniper/WALLET_INTELLIGENCE.md) — Wallet reconstruction, smart scores, metrics calculation.
+- [SCORING.md](file:///c:/Users/faath/Memecoinsniper/SCORING.md) — Mathematical Opportunity Scoring formula (0-100) and weight allocation.
+- [SECURITY.md](file:///c:/Users/faath/Memecoinsniper/SECURITY.md) — Security check rules, honeypot analysis, risk flags.
+- [TRADING_WORKFLOW.md](file:///c:/Users/faath/Memecoinsniper/TRADING_WORKFLOW.md) — Operator trading routine, signal filtering, manual journal logging.
+- [TROUBLESHOOTING.md](file:///c:/Users/faath/Memecoinsniper/TROUBLESHOOTING.md) — RPC rate limits, WebSocket disconnects, common solutions.
