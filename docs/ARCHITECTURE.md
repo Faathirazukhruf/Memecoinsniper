@@ -63,15 +63,17 @@ The **Personal Multi-Chain Memecoin Hunting Engine** is designed around single-o
 ### `@memesniper/engine`
 - Long-running background worker (`src/index.ts`).
 - Multi-chain adapters (`chains/solana`, `chains/bsc`, `chains/base`).
+- Real-time live market feed service (`src/services/live-feed-service.ts`) integrating DexScreener & GoPlus APIs for multi-chain discovery.
 - Real-time radars (`TokenRadar`, `WalletRadar`).
 - In-memory aggregation & Supabase cloud sync (`src/db/supabase.ts`).
 - Telegram Bot Alert Dispatcher with anti-spam deduplication (`src/services/telegram-notifier.ts`).
-- REST API server (`src/server.ts`) servicing the web terminal.
+- REST & Server-Sent Events (SSE) stream server (`src/server.ts`) broadcasting live token signals (`/api/stream`).
 
 ### `@memesniper/web`
 - Next.js 14+ App Router terminal cockpit.
 - High-density dark UI with Tailwind CSS and Lucide icons.
-- Real-time polling and interactive modals (Score breakdown, Security report, Wallet details).
+- Real-time Server-Sent Events (SSE) stream receiver with fallback polling.
+- Interactive modals (Score breakdown, Security report, Wallet details).
 - Operator trade journal and strategy analytics engine.
 
 ---

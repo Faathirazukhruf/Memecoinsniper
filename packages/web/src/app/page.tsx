@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Signal, SUPPORTED_CHAINS } from '@memesniper/shared';
-import { fetchSignals, triggerSimulation } from '@/lib/api';
+import { fetchSignals, getEventStreamUrl, triggerSimulation } from '@/lib/api';
 import { OpportunityScoreBadge } from '@/components/OpportunityScoreBadge';
 import { SecurityBadge } from '@/components/SecurityBadge';
 import {
@@ -19,6 +19,7 @@ import {
 
 export default function DashboardPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   const loadData = async () => {
     try {
@@ -31,8 +32,42 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 6000);
-    return () => clearInterval(interval);
+
+    // 1. Setup Live SSE Stream connection
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(getEventStreamUrl());
+      eventSource.onopen = () => {
+        setIsLiveConnected(true);
+      };
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'signal' && payload.data) {
+            setSignals((prev) => {
+              const exists = prev.some((s) => s.id === payload.data.id || (s.tokenAddress === payload.data.tokenAddress && s.chainId === payload.data.chainId));
+              if (exists) {
+                return prev.map((s) => (s.tokenAddress === payload.data.tokenAddress && s.chainId === payload.data.chainId ? payload.data : s));
+              }
+              return [payload.data, ...prev].slice(0, 50);
+            });
+          }
+        } catch {}
+      };
+      eventSource.onerror = () => {
+        setIsLiveConnected(false);
+      };
+    } catch {
+      setIsLiveConnected(false);
+    }
+
+    // 2. Fallback periodic sync
+    const interval = setInterval(loadData, 10000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(interval);
+    };
   }, []);
 
   const topOpportunities = signals.slice(0, 5);
@@ -43,10 +78,10 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="rounded-xl border border-surface-border bg-surface p-4 flex items-center justify-between">
           <div>
-            <div className="text-xs text-gray-400 font-medium">Engine Mode</div>
+            <div className="text-xs text-gray-400 font-medium">Engine Stream</div>
             <div className="text-lg font-bold text-white font-mono flex items-center gap-2 mt-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>LIVE HUNTER</span>
+              <span className={`h-2.5 w-2.5 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span>{isLiveConnected ? 'REAL-TIME SSE' : 'ACTIVE POLLING'}</span>
             </div>
           </div>
           <div className="h-10 w-10 rounded-lg bg-emerald-950/50 border border-emerald-800/40 flex items-center justify-center text-emerald-400">

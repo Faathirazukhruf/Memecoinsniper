@@ -12,6 +12,10 @@ import {
 
 const ENGINE_URL = process.env.NEXT_PUBLIC_ENGINE_API_URL || 'http://localhost:3001';
 
+export function getEventStreamUrl(): string {
+  return `${ENGINE_URL}/api/stream`;
+}
+
 export async function fetchHealth(): Promise<{
   status: string;
   chains: { chainId: ChainId; name: string; isConnected: boolean; eventsProcessed: number }[];

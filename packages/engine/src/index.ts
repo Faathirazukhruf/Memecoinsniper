@@ -8,6 +8,7 @@ import { MarketService } from './services/market-service.js';
 import { SecurityService } from './services/security-service.js';
 import { ScoringService } from './services/scoring-service.js';
 import { TelegramNotifier } from './services/telegram-notifier.js';
+import { LiveMarketFeedService } from './services/live-feed-service.js';
 import { TokenRadar } from './radars/token-radar.js';
 import { WalletRadar } from './radars/wallet-radar.js';
 import { createServer } from './server.js';
@@ -44,6 +45,7 @@ async function bootstrap() {
   const telegramNotifier = new TelegramNotifier();
   const walletRadar = new WalletRadar();
   const tokenRadar = new TokenRadar(marketService, scoringService, telegramNotifier, walletRadar);
+  const liveMarketFeed = new LiveMarketFeedService();
 
   // 3. Bind Chain Adapter Events to Radars
   for (const [chainId, adapter] of adapters.entries()) {
@@ -65,10 +67,23 @@ async function bootstrap() {
     });
   }
 
-  // 4. Seed Initial Opportunities for immediate UI usability
+  // 4. Bind Real-time Multi-Chain Live Market Feed (DexScreener + GoPlus)
+  liveMarketFeed.on('live_event', async (data) => {
+    try {
+      await tokenRadar.processLiveOpportunity(data);
+    } catch (err) {
+      console.error('[Engine] Error processing live market opportunity:', (err as Error).message);
+    }
+  });
+
+  liveMarketFeed.start().catch((err) => {
+    console.warn('[Engine] Live market feed start warning:', err.message);
+  });
+
+  // 5. Seed Initial Opportunities for immediate UI usability
   await seedInitialOpportunities(tokenRadar);
 
-  // 5. Start API Server
+  // 6. Start API Server
   const app = createServer(adapters, tokenRadar, walletRadar);
   const server = app.listen(config.port, () => {
     console.log(`⚡ Engine API & Stream Server listening on http://localhost:${config.port}`);
@@ -79,6 +94,7 @@ async function bootstrap() {
   const shutdown = async () => {
     console.log('\n[Engine] Gracefully shutting down...');
     server.close();
+    liveMarketFeed.stop();
     for (const adapter of adapters.values()) {
       await adapter.stop();
     }

@@ -37,6 +37,27 @@ export function createServer(
     });
   });
 
+  // Server-Sent Events (SSE) Real-Time Stream
+  app.get('/api/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const signalListener = (signal: any) => {
+      res.write(`data: ${JSON.stringify({ type: 'SIGNAL', data: signal })}\n\n`);
+    };
+
+    tokenRadar.on('new_signal', signalListener);
+
+    // Send initial heartbeat
+    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() })}\n\n`);
+
+    req.on('close', () => {
+      tokenRadar.off('new_signal', signalListener);
+    });
+  });
+
   // Screener / Signals endpoint
   app.get('/api/signals', async (req, res) => {
     try {

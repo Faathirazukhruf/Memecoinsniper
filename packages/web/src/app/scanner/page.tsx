@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Signal, SUPPORTED_CHAINS } from '@memesniper/shared';
-import { fetchSignals } from '@/lib/api';
+import { fetchSignals, getEventStreamUrl } from '@/lib/api';
 import { OpportunityScoreBadge } from '@/components/OpportunityScoreBadge';
 import { SecurityBadge } from '@/components/SecurityBadge';
 import {
@@ -32,8 +32,32 @@ export default function ScannerPage() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
+
+    // Live stream connection
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(getEventStreamUrl());
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'signal' && payload.data) {
+            setSignals((prev) => {
+              const exists = prev.some((s) => s.id === payload.data.id || (s.tokenAddress === payload.data.tokenAddress && s.chainId === payload.data.chainId));
+              if (exists) {
+                return prev.map((s) => (s.tokenAddress === payload.data.tokenAddress && s.chainId === payload.data.chainId ? payload.data : s));
+              }
+              return [payload.data, ...prev].slice(0, 50);
+            });
+          }
+        } catch {}
+      };
+    } catch {}
+
+    const interval = setInterval(loadData, 10000);
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(interval);
+    };
   }, []);
 
   // Filter signals

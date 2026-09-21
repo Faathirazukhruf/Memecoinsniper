@@ -6,13 +6,14 @@ import {
   TokenCreatedEvent,
   TokenEntity,
 } from '@memesniper/shared';
+import { EventEmitter } from 'events';
 import { db } from '../db/supabase.js';
 import { MarketService } from '../services/market-service.js';
 import { ScoringService } from '../services/scoring-service.js';
 import { TelegramNotifier } from '../services/telegram-notifier.js';
 import { WalletRadar } from './wallet-radar.js';
 
-export class TokenRadar {
+export class TokenRadar extends EventEmitter {
   private marketService: MarketService;
   private scoringService: ScoringService;
   private telegramNotifier: TelegramNotifier;
@@ -24,6 +25,7 @@ export class TokenRadar {
     telegramNotifier: TelegramNotifier,
     walletRadar: WalletRadar
   ) {
+    super();
     this.marketService = marketService;
     this.scoringService = scoringService;
     this.telegramNotifier = telegramNotifier;
@@ -44,6 +46,74 @@ export class TokenRadar {
         await this.handleSwap(event as SwapEvent);
         break;
     }
+  }
+
+  public async processLiveOpportunity(data: {
+    event: PoolCreatedEvent;
+    metadata: {
+      symbol: string;
+      name: string;
+      priceUsd: number;
+      liquidityUsd: number;
+      volume5mUsd: number;
+      volume1hUsd: number;
+      buys5m: number;
+      sells5m: number;
+      dex: string;
+      createdAt: number;
+      isNew: boolean;
+    };
+  }): Promise<Signal | null> {
+    const { event, metadata } = data;
+
+    // 1. Update Market Service with real on-chain metrics
+    this.marketService.updateRealMetrics(event.chainId, event.tokenAddress, {
+      priceUsd: metadata.priceUsd,
+      liquidityUsd: metadata.liquidityUsd,
+      volume5mUsd: metadata.volume5mUsd,
+      volume1hUsd: metadata.volume1hUsd,
+      buys5m: metadata.buys5m,
+      sells5m: metadata.sells5m,
+    });
+
+    // 2. Build or update token entity
+    let token = await db.getToken(event.chainId, event.tokenAddress);
+    if (!token) {
+      token = {
+        address: event.tokenAddress,
+        chainId: event.chainId,
+        symbol: metadata.symbol || 'MEME',
+        name: metadata.name || 'Meme Token',
+        decimals: 9,
+        createdAt: metadata.createdAt || Date.now(),
+      };
+    } else {
+      token.symbol = metadata.symbol || token.symbol;
+      token.name = metadata.name || token.name;
+    }
+
+    token.pool = {
+      id: event.poolAddress || event.tokenAddress,
+      address: event.poolAddress || event.tokenAddress,
+      chainId: event.chainId,
+      dex: metadata.dex || event.dex || 'Raydium',
+      baseTokenAddress: event.baseTokenAddress,
+      quoteTokenAddress: event.quoteTokenAddress,
+      quoteTokenSymbol: event.chainId === 'solana' ? 'SOL' : event.chainId === 'bsc' ? 'WBNB' : 'WETH',
+      initialLiquidityUsd: metadata.liquidityUsd,
+      currentLiquidityUsd: metadata.liquidityUsd,
+      reserveBase: '1000000',
+      reserveQuote: '10',
+      createdAt: metadata.createdAt,
+      lpBurnedOrLocked: true,
+      lpLockedPercentage: 100,
+    };
+
+    const triggerReason = metadata.isNew
+      ? `Live Launch Detected on ${metadata.dex} ($${Math.round(metadata.liquidityUsd).toLocaleString()} Liq)`
+      : `Volume Acceleration Surge ($${Math.round(metadata.volume5mUsd).toLocaleString()} in 5m)`;
+
+    return await this.evaluateAndSignal(token, metadata.dex, triggerReason);
   }
 
   private async handleTokenCreated(event: TokenCreatedEvent): Promise<void> {
@@ -158,8 +228,11 @@ export class TokenRadar {
 
     await db.saveSignal(signal);
 
+    // Emit live signal event for Server-Sent Events (SSE) subscribers
+    this.emit('new_signal', signal);
+
     // Dispatch Telegram alert if priority threshold is passed
-    if (score.isHighPriority || score.totalScore >= 75) {
+    if (score.isHighPriority || score.totalScore >= 80) {
       await this.telegramNotifier.sendSignalAlert(signal);
     }
 
