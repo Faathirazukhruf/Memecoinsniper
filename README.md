@@ -64,8 +64,9 @@ COVER THE MARKET → FILTER THE GARBAGE → FIND SMART MONEY → DETECT MOMENTUM
 │   ├── shared/         # Common TypeScript types, mathematical scoring, security rules, wallet metrics
 │   ├── engine/         # Blockchain adapters (Solana, BSC, Base), radars, scoring, DB persistence, Telegram bot
 │   └── web/            # Next.js 14+ dark terminal cockpit (Dashboard, Screener, Detail, Wallets, Journal, Analytics)
+├── docs/               # In-depth architectural, setup, and trading guides
 ├── tests/              # Vitest test suites (scoring, security, wallet metrics, normalization)
-└── docs/               # In-depth architectural and operational documentation
+└── README.md           # Master project overview & quickstart
 ```
 
 ---
@@ -99,15 +100,17 @@ pnpm test
 
 ---
 
-## 📚 Complete Documentation Suite
+## 📚 Documentation Index (`/docs`)
 
-- [ARCHITECTURE.md](file:///c:/Users/faath/Memecoinsniper/ARCHITECTURE.md) — System design, dataflow pipelines, process model.
-- [SETUP.md](file:///c:/Users/faath/Memecoinsniper/SETUP.md) — Step-by-step local development and environment setup guide.
-- [DEPLOYMENT.md](file:///c:/Users/faath/Memecoinsniper/DEPLOYMENT.md) — Free/low-cost deployment strategies (Vercel, Supabase, VPS worker).
-- [DATABASE.md](file:///c:/Users/faath/Memecoinsniper/DATABASE.md) — PostgreSQL schema, migrations, indices, and data lifecycle.
-- [CHAINS.md](file:///c:/Users/faath/Memecoinsniper/CHAINS.md) — Multi-chain adapter specifications for Solana, BSC, Base.
-- [WALLET_INTELLIGENCE.md](file:///c:/Users/faath/Memecoinsniper/WALLET_INTELLIGENCE.md) — Wallet reconstruction, smart scores, metrics calculation.
-- [SCORING.md](file:///c:/Users/faath/Memecoinsniper/SCORING.md) — Mathematical Opportunity Scoring formula (0-100) and weight allocation.
-- [SECURITY.md](file:///c:/Users/faath/Memecoinsniper/SECURITY.md) — Security check rules, honeypot analysis, risk flags.
-- [TRADING_WORKFLOW.md](file:///c:/Users/faath/Memecoinsniper/TRADING_WORKFLOW.md) — Operator trading routine, signal filtering, manual journal logging.
-- [TROUBLESHOOTING.md](file:///c:/Users/faath/Memecoinsniper/TROUBLESHOOTING.md) — RPC rate limits, WebSocket disconnects, common solutions.
+All detailed technical documentation is organized in the [`docs/`](file:///c:/Users/faath/Memecoinsniper/docs) folder:
+
+- [docs/ARCHITECTURE.md](file:///c:/Users/faath/Memecoinsniper/docs/ARCHITECTURE.md) — System design, dataflow pipelines, process model.
+- [docs/SETUP.md](file:///c:/Users/faath/Memecoinsniper/docs/SETUP.md) — Step-by-step local development and environment setup guide.
+- [docs/DEPLOYMENT.md](file:///c:/Users/faath/Memecoinsniper/docs/DEPLOYMENT.md) — Free/low-cost deployment strategies (Vercel, Supabase, VPS worker).
+- [docs/DATABASE.md](file:///c:/Users/faath/Memecoinsniper/docs/DATABASE.md) — PostgreSQL schema, migrations, indices, and data lifecycle.
+- [docs/CHAINS.md](file:///c:/Users/faath/Memecoinsniper/docs/CHAINS.md) — Multi-chain adapter specifications for Solana, BSC, Base.
+- [docs/WALLET_INTELLIGENCE.md](file:///c:/Users/faath/Memecoinsniper/docs/WALLET_INTELLIGENCE.md) — Wallet reconstruction, smart scores, metrics calculation.
+- [docs/SCORING.md](file:///c:/Users/faath/Memecoinsniper/docs/SCORING.md) — Mathematical Opportunity Scoring formula (0-100) and weight allocation.
+- [docs/SECURITY.md](file:///c:/Users/faath/Memecoinsniper/docs/SECURITY.md) — Security check rules, honeypot analysis, risk flags.
+- [docs/TRADING_WORKFLOW.md](file:///c:/Users/faath/Memecoinsniper/docs/TRADING_WORKFLOW.md) — Operator trading routine, signal filtering, manual journal logging.
+- [docs/TROUBLESHOOTING.md](file:///c:/Users/faath/Memecoinsniper/docs/TROUBLESHOOTING.md) — RPC rate limits, WebSocket disconnects, common solutions.
