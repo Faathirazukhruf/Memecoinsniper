@@ -16,11 +16,14 @@ export default function WalletDetailPage() {
   const chainId = (params.chain as ChainId) || 'solana';
   const address = (params.address as string) || '';
 
+  const [error, setError] = useState(false);
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
     async function load() {
-      const res = await fetchWalletDetail(chainId, address);
+      const res = await fetchWalletDetail(chainId, address).catch(() => null);
+      if (!res) { setError(true); return; }
+      setError(false);
       setData(res);
     }
     load();
@@ -30,6 +33,7 @@ export default function WalletDetailPage() {
   const wallet = data?.wallet;
   const metrics = data?.metrics;
 
+  if (error) return <p role="alert">Wallet data unavailable.</p>;
   return (
     <div className="space-y-6">
       <Link
@@ -45,7 +49,7 @@ export default function WalletDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-blue/10 border border-accent-blue/30 text-accent-blue font-mono font-bold text-xl">
-              {wallet?.smartScore || 85}
+              {wallet?.smartScore ?? '—'}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -78,37 +82,37 @@ export default function WalletDetailPage() {
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">WIN RATE</span>
             <span className="text-emerald-400 font-bold text-sm">
-              {metrics ? Math.round(metrics.winRate * 100) : 76}%
+              {metrics ? Math.round(metrics.winRate * 100) : '—'}%
             </span>
           </div>
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">AVG MULTIPLE</span>
             <span className="text-cyan-400 font-bold text-sm">
-              {metrics?.avgRoiMultiple || 4.8}x
+              {metrics?.avgRoiMultiple ?? '—'}x
             </span>
           </div>
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">PROFIT FACTOR</span>
             <span className="text-white font-bold text-sm">
-              {metrics?.profitFactor || 5.4}
+              {metrics?.profitFactor ?? '—'}
             </span>
           </div>
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">TOTAL TRADES</span>
             <span className="text-white font-bold text-sm">
-              {metrics?.totalTrades || 34}
+              {metrics?.totalTrades ?? '—'}
             </span>
           </div>
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">EARLY ENTRY RATE</span>
             <span className="text-emerald-400 font-bold text-sm">
-              {metrics ? Math.round(metrics.earlyEntryRate * 100) : 88}%
+              {metrics ? Math.round(metrics.earlyEntryRate * 100) : '—'}%
             </span>
           </div>
           <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
             <span className="text-gray-500 block text-[10px]">BEST TRADE</span>
             <span className="text-accent-cyan font-bold text-sm">
-              {metrics?.bestTradeMultiple || 18.5}x
+              {metrics?.bestTradeMultiple ?? '—'}x
             </span>
           </div>
         </div>

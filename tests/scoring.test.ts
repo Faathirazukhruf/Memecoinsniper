@@ -2,6 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { calculateOpportunityScore } from '../packages/shared/src/scoring/calculator.js';
 
 describe('Opportunity Scoring Calculator', () => {
+  it.each(['UNKNOWN', 'WARN', 'FAIL'] as const)('never prioritizes %s security even with strong momentum', (status) => {
+    const score = calculateOpportunityScore({ tokenCreatedAt: Date.now(),
+      market: { liquidityUsd: 100000, volumeAcceleration: 10, buys5m: 100, sells5m: 1, uniqueBuyers5m: 100 },
+      security: { status, isLpLockedOrBurned: true, lpLockedPercentage: 100 },
+      smartWalletsCount: 5, smartWalletAvgScore: 99,
+    });
+    expect(score.isHighPriority).toBe(false);
+  });
   it('should calculate high score for token with strong confluence and clean security', () => {
     const score = calculateOpportunityScore({
       tokenCreatedAt: Date.now() - 5 * 60 * 1000, // 5 mins old

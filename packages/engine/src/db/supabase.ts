@@ -45,7 +45,7 @@ class InMemoryDatabaseAdapter implements DatabaseAdapter {
   private alertLogs: { chainId: ChainId; tokenAddress: string; score: number; timestamp: number }[] = [];
 
   constructor() {
-    this.seedDefaultWallets();
+    if (config.demoMode) this.seedDefaultWallets();
   }
 
   isCloudConnected(): boolean {
@@ -424,7 +424,7 @@ class SupabaseDatabaseAdapter implements DatabaseAdapter {
 }
 
 export const db: DatabaseAdapter =
-  config.supabase.url && (config.supabase.serviceRoleKey || config.supabase.anonKey)
+  !config.demoMode && config.supabase.url && (config.supabase.serviceRoleKey || config.supabase.anonKey)
     ? new SupabaseDatabaseAdapter(
         config.supabase.url,
         config.supabase.serviceRoleKey || config.supabase.anonKey!

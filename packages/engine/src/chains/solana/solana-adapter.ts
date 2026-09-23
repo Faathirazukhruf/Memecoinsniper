@@ -170,35 +170,29 @@ export class SolanaAdapter extends BaseChainAdapter {
   }
 
   async checkSecurity(tokenAddress: string): Promise<SecurityReport> {
-    let isMintable = false;
-    let isFreezable = false;
+    let isMintable: boolean | null = null;
+    let isFreezable: boolean | null = null;
 
     if (this.connection) {
       try {
         const pubkey = new PublicKey(tokenAddress);
         const accInfo = await this.connection.getParsedAccountInfo(pubkey);
-        if (accInfo.value && 'parsed' in accInfo.value.data) {
+        if (accInfo.value && 'parsed' in accInfo.value.data && accInfo.value.data.parsed.type === 'mint') {
           const info = accInfo.value.data.parsed.info;
           isMintable = !!info.mintAuthority;
           isFreezable = !!info.freezeAuthority;
         }
       } catch {
-        isMintable = false;
-        isFreezable = false;
+        isMintable = null;
+        isFreezable = null;
       }
     }
 
     return evaluateSecurity({
       tokenAddress,
       chainId: 'solana',
-      isHoneypot: false,
       isMintable,
       isFreezable,
-      isLpLockedOrBurned: true,
-      lpLockedPercentage: 100,
-      buyTaxPercentage: 0,
-      sellTaxPercentage: 0,
-      top10HoldersSharePercentage: 18.5,
     });
   }
 }

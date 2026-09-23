@@ -23,6 +23,7 @@ export class TelegramNotifier {
   }
 
   public async sendSignalAlert(signal: Signal): Promise<boolean> {
+    if (!this.enabled || config.demoMode || signal.security.status !== 'PASS') return false;
     if (signal.opportunityScore.totalScore < this.minScore) {
       return false;
     }
@@ -37,15 +38,7 @@ export class TelegramNotifier {
       return false;
     }
 
-    // Log alert to DB to prevent duplicate alerts
-    await db.logAlert(signal.chainId, signal.tokenAddress, signal.opportunityScore.totalScore);
-
     const message = this.formatAlertMessage(signal);
-
-    if (!this.enabled) {
-      console.log(`\n--- [MOCK TELEGRAM ALERT] ---\n${message}\n-----------------------------\n`);
-      return true;
-    }
 
     try {
       const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
@@ -62,6 +55,7 @@ export class TelegramNotifier {
 
       const data = (await res.json()) as any;
       if (data.ok) {
+        await db.logAlert(signal.chainId, signal.tokenAddress, signal.opportunityScore.totalScore);
         signal.telegramAlertSent = true;
         signal.telegramMessageId = data.result?.message_id;
         console.log(`[Telegram Notifier] Alert sent for $${signal.tokenSymbol} (Score: ${signal.opportunityScore.totalScore})`);

@@ -2,6 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { evaluateSecurity } from '../packages/shared/src/security/rules.js';
 
 describe('Security / Risk Evaluation Engine', () => {
+  it.each([undefined, null])('does not pass missing critical checks (%s)', (missing) => {
+    const report = evaluateSecurity({ tokenAddress: 'mint', chainId: 'solana',
+      isHoneypot: missing, isMintable: false, isFreezable: false,
+    });
+    expect(report.status).toBe('UNKNOWN');
+    expect(report.flags.some(f => f.code === 'TAX_ACCEPTABLE')).toBe(false);
+    expect(report.flags.find(f => f.code === 'HONEYPOT_UNKNOWN')?.passed).toBe(false);
+  });
   it('should flag Honeypot as FAIL with 100 risk score', () => {
     const report = evaluateSecurity({
       tokenAddress: '0x123',

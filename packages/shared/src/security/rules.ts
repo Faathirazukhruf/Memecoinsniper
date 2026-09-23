@@ -49,7 +49,7 @@ export function evaluateSecurity(data: RawSecurityCheckData): SecurityReport {
       name: 'Honeypot Check',
       severity: 'MEDIUM',
       description: 'Could not reliably simulate sell transfer.',
-      passed: true,
+      passed: false,
     });
   }
 
@@ -74,7 +74,7 @@ export function evaluateSecurity(data: RawSecurityCheckData): SecurityReport {
       description: `Buy Tax: ${buyTax}%, Sell Tax: ${sellTax}%`,
       passed: false,
     });
-  } else if (data.buyTaxPercentage !== null && data.sellTaxPercentage !== null) {
+  } else if (Number.isFinite(data.buyTaxPercentage) && Number.isFinite(data.sellTaxPercentage)) {
     flags.push({
       code: 'TAX_ACCEPTABLE',
       name: 'Tax Rates Acceptable',
@@ -135,12 +135,12 @@ export function evaluateSecurity(data: RawSecurityCheckData): SecurityReport {
       passed: false,
     });
   } else if (data.isLpLockedOrBurned === true) {
-    const pct = data.lpLockedPercentage ?? 100;
+    const pct = data.lpLockedPercentage;
     flags.push({
       code: 'LP_LOCKED',
       name: 'LP Burned / Locked',
       severity: 'LOW',
-      description: `${pct}% of LP tokens burned or locked in verified contract.`,
+      description: pct == null ? 'LP lock reported; percentage unverified.' : `${pct}% of LP tokens reported locked/burned.`,
       passed: true,
     });
   }
@@ -162,12 +162,16 @@ export function evaluateSecurity(data: RawSecurityCheckData): SecurityReport {
   let status: SecurityStatus = 'PASS';
   if (data.isHoneypot === true || buyTax > 25 || sellTax > 25 || riskScore >= 75) {
     status = 'FAIL';
-  } else if (riskScore >= 35 || data.isMintable === true || data.isFreezable === true || data.isLpLockedOrBurned === false) {
+  } else if (riskScore >= 35 || data.isMintable === true || data.isFreezable === true || data.hasBlacklist === true || data.isLpLockedOrBurned === false) {
     status = 'WARN';
   } else if (
-    data.isHoneypot === undefined &&
-    data.isMintable === undefined &&
-    data.isFreezable === undefined
+    data.isHoneypot == null ||
+    data.isMintable == null ||
+    data.isFreezable == null ||
+    data.isLpLockedOrBurned == null ||
+    !Number.isFinite(data.lpLockedPercentage) ||
+    !Number.isFinite(data.buyTaxPercentage) ||
+    !Number.isFinite(data.sellTaxPercentage)
   ) {
     status = 'UNKNOWN';
   } else {

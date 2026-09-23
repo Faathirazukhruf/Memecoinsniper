@@ -23,17 +23,17 @@ async function bootstrap() {
   // 1. Initialize Chain Adapters
   const adapters = new Map<ChainId, BaseChainAdapter>();
 
-  if (config.chains.solana.enabled) {
+  if (!config.demoMode && config.chains.solana.enabled) {
     const solana = new SolanaAdapter(config.chains.solana.rpcUrl, config.chains.solana.wsUrl);
     adapters.set('solana', solana);
   }
 
-  if (config.chains.bsc.enabled) {
+  if (!config.demoMode && config.chains.bsc.enabled) {
     const bsc = new BscAdapter(config.chains.bsc.rpcUrl, config.chains.bsc.wsUrl);
     adapters.set('bsc', bsc);
   }
 
-  if (config.chains.base.enabled) {
+  if (!config.demoMode && config.chains.base.enabled) {
     const base = new BaseAdapter(config.chains.base.rpcUrl, config.chains.base.wsUrl);
     adapters.set('base', base);
   }
@@ -76,12 +76,12 @@ async function bootstrap() {
     }
   });
 
-  liveMarketFeed.start().catch((err) => {
+  if (!config.demoMode) liveMarketFeed.start().catch((err) => {
     console.warn('[Engine] Live market feed start warning:', err.message);
   });
 
   // 5. Seed Initial Opportunities for immediate UI usability
-  await seedInitialOpportunities(tokenRadar);
+  if (config.demoMode) await seedInitialOpportunities(tokenRadar);
 
   // 6. Start API Server
   const app = createServer(adapters, tokenRadar, walletRadar);

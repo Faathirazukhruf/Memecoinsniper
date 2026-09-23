@@ -105,8 +105,7 @@ export class TokenRadar extends EventEmitter {
       reserveBase: '1000000',
       reserveQuote: '10',
       createdAt: metadata.createdAt,
-      lpBurnedOrLocked: true,
-      lpLockedPercentage: 100,
+      lpBurnedOrLocked: null,
     };
 
     const triggerReason = metadata.isNew
@@ -161,8 +160,7 @@ export class TokenRadar extends EventEmitter {
       reserveBase: '100000000',
       reserveQuote: '10',
       createdAt: event.timestamp || Date.now(),
-      lpBurnedOrLocked: true,
-      lpLockedPercentage: 100,
+      lpBurnedOrLocked: null,
     };
     await db.saveToken(token);
 
@@ -232,7 +230,7 @@ export class TokenRadar extends EventEmitter {
     this.emit('new_signal', signal);
 
     // Dispatch Telegram alert if priority threshold is passed
-    if (score.isHighPriority || score.totalScore >= 80) {
+    if (security.status === 'PASS' && (score.isHighPriority || score.totalScore >= 80)) {
       await this.telegramNotifier.sendSignalAlert(signal);
     }
 

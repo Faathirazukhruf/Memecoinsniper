@@ -16,3 +16,5 @@ export * from './constants/defaults';
 export * from './scoring/calculator';
 export * from './security/rules';
 export * from './wallet/metrics';
+
+export * from './analytics/summary';

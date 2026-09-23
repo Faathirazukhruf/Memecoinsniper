@@ -7,6 +7,7 @@ dotenv.config();
 
 export interface EngineConfig {
   nodeEnv: string;
+  demoMode: boolean;
   port: number;
   supabase: {
     url?: string;
@@ -45,6 +46,7 @@ export interface EngineConfig {
 }
 
 export const config: EngineConfig = {
+  demoMode: process.env.DEMO_MODE === 'true',
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
   supabase: {

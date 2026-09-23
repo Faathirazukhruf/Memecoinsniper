@@ -1,137 +1,76 @@
 import fetch from 'node-fetch';
 import { ChainId, evaluateSecurity, SecurityReport } from '@memesniper/shared';
 import { BaseChainAdapter } from '../chains/base/chain-adapter.js';
+import { config } from '../config/env.js';
 import { db } from '../db/supabase.js';
 
-export class SecurityService {
-  private adapters: Map<ChainId, BaseChainAdapter>;
+export function securityBoolean(value: unknown): boolean | null {
+  if (value === '1' || value === 1 || value === true) return true;
+  if (value === '0' || value === 0 || value === false) return false;
+  return null;
+}
+export function securityPercentage(value: unknown): number | null {
+  if ((typeof value !== 'string' && typeof value !== 'number') || String(value).trim() === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && number <= 1 ? number * 100 : null;
+}
+function anyRisk(a: boolean | null, b: boolean | null): boolean | null {
+  return a === true || b === true ? true : a === false && b === false ? false : null;
+}
 
-  constructor(adapters: Map<ChainId, BaseChainAdapter>) {
-    this.adapters = adapters;
-  }
+export class SecurityService {
+  constructor(private adapters: Map<ChainId, BaseChainAdapter>, private request: typeof fetch = fetch) {}
 
   public async evaluateToken(chainId: ChainId, tokenAddress: string): Promise<SecurityReport> {
-    // Check cached DB report first (cache for 5 minutes)
+    if (config.demoMode) return evaluateSecurity({ tokenAddress, chainId });
     const cached = await db.getSecurityReport(chainId, tokenAddress);
-    if (cached && Date.now() - cached.checkedAt < 300000) {
-      return cached;
-    }
-
+    if (cached && Date.now() - cached.checkedAt < 300000) return cached;
     let report: SecurityReport | null = null;
-
-    // 1. Try Live On-Chain Security API (GoPlus Security API - Free, Real-Time)
     try {
       report = await this.fetchLiveSecurity(chainId, tokenAddress);
-    } catch (err) {
-      console.warn(`[Security Service] Live security API check skipped for ${chainId}:${tokenAddress}:`, (err as Error).message);
+    } catch {
+      // Network and malformed responses are unknown, never evidence of safety.
     }
-
-    // 2. Fallback to RPC adapter check if API failed
     if (!report) {
-      const adapter = this.adapters.get(chainId);
-      if (adapter) {
-        try {
-          report = await adapter.checkSecurity(tokenAddress);
-        } catch {
-          report = evaluateSecurity({
-            tokenAddress,
-            chainId,
-            isHoneypot: false,
-            isMintable: false,
-            isFreezable: false,
-            isLpLockedOrBurned: true,
-            lpLockedPercentage: 100,
-          });
-        }
-      } else {
-        report = evaluateSecurity({
-          tokenAddress,
-          chainId,
-          isHoneypot: false,
-          isMintable: false,
-          isFreezable: false,
-          isLpLockedOrBurned: true,
-          lpLockedPercentage: 100,
-        });
+      try {
+        report = await this.adapters.get(chainId)?.checkSecurity(tokenAddress) ?? null;
+      } catch {
+        // Keep unavailable checks unknown.
       }
     }
-
+    report ??= evaluateSecurity({ tokenAddress, chainId });
     await db.saveSecurityReport(report);
     return report;
   }
 
-  /**
-   * Fetches real on-chain security metrics from GoPlus Security API
-   */
   private async fetchLiveSecurity(chainId: ChainId, tokenAddress: string): Promise<SecurityReport | null> {
-    const chainCodeMap: Record<ChainId, string> = {
-      solana: 'solana',
-      bsc: '56',
-      base: '8453',
-    };
-
-    const chainCode = chainCodeMap[chainId];
-    if (!chainCode) return null;
-
-    if (chainId === 'solana') {
-      const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${tokenAddress}`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'MemecoinSniper/1.0' } });
-      if (!res.ok) return null;
-
-      const data = (await res.json()) as any;
-      const tokenData = data.result?.[tokenAddress.toLowerCase()] || data.result?.[tokenAddress];
-      if (!tokenData) return null;
-
-      const isMintable = tokenData.mintable?.status === '1' || tokenData.is_mintable === '1';
-      const isFreezable = tokenData.freezable?.status === '1' || tokenData.is_freezable === '1';
-      const top10 = parseFloat(tokenData.top_10_holder_percent || '18') * 100;
-
-      return evaluateSecurity({
-        tokenAddress,
-        chainId: 'solana',
-        isHoneypot: false,
-        isMintable,
-        isFreezable,
-        isOwnershipRenounced: !tokenData.owner_address,
-        isLpLockedOrBurned: true,
-        lpLockedPercentage: 100,
-        top10HoldersSharePercentage: top10 > 0 ? top10 : 18.5,
-        buyTaxPercentage: 0,
-        sellTaxPercentage: 0,
-      });
-    } else {
-      // EVM (BSC / Base)
-      const url = `https://api.gopluslabs.io/api/v1/token_security/${chainCode}?contract_addresses=${tokenAddress}`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'MemecoinSniper/1.0' } });
-      if (!res.ok) return null;
-
-      const data = (await res.json()) as any;
-      const tokenData = data.result?.[tokenAddress.toLowerCase()];
-      if (!tokenData) return null;
-
-      const isHoneypot = tokenData.is_honeypot === '1';
-      const buyTax = parseFloat(tokenData.buy_tax || '0') * 100;
-      const sellTax = parseFloat(tokenData.sell_tax || '0') * 100;
-      const isMintable = tokenData.is_mintable === '1';
-      const isFreezable = tokenData.is_blacklisted === '1' || tokenData.transfer_pausable === '1';
-      const isRenounced = tokenData.owner_address === '0x0000000000000000000000000000000000000000' || !tokenData.owner_address;
-      const lpLocked = tokenData.lp_holders && tokenData.lp_holders.length > 0;
-      const top10 = parseFloat(tokenData.top_10_holder_percent || '0.2') * 100;
-
-      return evaluateSecurity({
-        tokenAddress,
-        chainId,
-        isHoneypot,
-        buyTaxPercentage: buyTax,
-        sellTaxPercentage: sellTax,
-        isMintable,
-        isFreezable,
-        isOwnershipRenounced: isRenounced,
-        isLpLockedOrBurned: lpLocked,
-        lpLockedPercentage: lpLocked ? 100 : 0,
-        top10HoldersSharePercentage: top10 > 0 ? top10 : 20,
-        hasBlacklist: tokenData.is_blacklisted === '1',
-      });
-    }
+    const endpoint = chainId === 'solana' ? 'solana/token_security' : 'token_security/' + (chainId === 'bsc' ? '56' : '8453');
+    const res = await this.request('https://api.gopluslabs.io/api/v1/' + endpoint + '?contract_addresses=' + encodeURIComponent(tokenAddress), {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    if (Number(data.code) !== 1) return null;
+    const raw = data.result?.[chainId === 'solana' ? tokenAddress : tokenAddress.toLowerCase()];
+    if (!raw || typeof raw !== 'object') return null;
+    const solana = chainId === 'solana';
+    const blacklist = securityBoolean(raw.is_blacklisted);
+    return evaluateSecurity({
+      tokenAddress,
+      chainId,
+      isHoneypot: solana ? null : securityBoolean(raw.is_honeypot),
+      isMintable: securityBoolean(solana ? raw.mintable?.status ?? raw.is_mintable : raw.is_mintable),
+      isFreezable: solana ? securityBoolean(raw.freezable?.status ?? raw.is_freezable) : anyRisk(blacklist, securityBoolean(raw.transfer_pausable)),
+      hasBlacklist: blacklist,
+      buyTaxPercentage: solana ? null : securityPercentage(raw.buy_tax),
+      sellTaxPercentage: solana ? null : securityPercentage(raw.sell_tax),
+      top10HoldersSharePercentage: securityPercentage(raw.top_10_holder_percent),
+      // A holder list does not prove a lock. Pool-specific verification is still required.
+      isLpLockedOrBurned: null,
+      lpLockedPercentage: null,
+      isOwnershipRenounced: typeof raw.owner_address === 'string'
+        ? raw.owner_address === '' || raw.owner_address === '0x0000000000000000000000000000000000000000'
+        : null,
+    });
   }
 }

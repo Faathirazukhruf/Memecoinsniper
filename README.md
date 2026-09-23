@@ -9,6 +9,14 @@
 
 ---
 
+## Current implementation status
+
+Live mode is the default (`DEMO_MODE=false`). Synthetic startup tokens and example wallets are only available with `DEMO_MODE=true`; demo mode uses memory storage and disables chain listeners, the live market feed, and Telegram alerts. The UI labels demo and offline states.
+
+Security failures and missing evidence remain `UNKNOWN`; only `PASS` reports can generate Telegram alerts. Pool-specific lock verification is not implemented, so live reports may remain `UNKNOWN` and alerts are intentionally suppressed. Analytics use recorded journal results, with missing data shown explicitly.
+
+This is still a research prototype: chain decoding, market estimates, durable journal recovery, and strategy validation require further work before real-money use.
+
 ## 🎯 Product Vision & Philosophy
 
 **Memecoinsniper** is a personal hunting terminal designed to reduce thousands of raw blockchain events per minute into a handful of high-probability opportunities that deserve human trading attention.

@@ -43,7 +43,7 @@ export function SecurityBadge({ report, status = report?.status || 'UNKNOWN', sh
         <Icon className="h-3.5 w-3.5" />
         <span>{config.label}</span>
         {report && (
-          <span className="text-[10px] opacity-75">({report.riskScore}% risk)</span>
+          <span className="text-[10px] opacity-75">{status === 'UNKNOWN' ? '(incomplete)' : `(risk score ${report.riskScore}/100)`}</span>
         )}
       </div>
 

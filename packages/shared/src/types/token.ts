@@ -26,7 +26,7 @@ export interface PoolMetadata {
   reserveBase: string;
   reserveQuote: string;
   createdAt: number;
-  lpBurnedOrLocked: boolean;
+  lpBurnedOrLocked: boolean | null;
   lpLockedPercentage?: number;
 }
 

@@ -46,7 +46,7 @@ export function calculateOpportunityScore(params: ScoreInputParams): Opportunity
     }
 
     if (security?.isLpLockedOrBurned) {
-      const lockPct = security.lpLockedPercentage ?? 100;
+      const lockPct = security.lpLockedPercentage ?? 0;
       const lockBonus = (weights.liquidity * 0.3) * (lockPct / 100);
       liquidityScore += lockBonus;
       liquidityReason = `$${Math.round(liquidityUsd).toLocaleString()} liquidity with ${lockPct}% locked/burned`;
@@ -106,7 +106,7 @@ export function calculateOpportunityScore(params: ScoreInputParams): Opportunity
   let securityReason = '';
 
   if (!security) {
-    securityScore = weights.security * 0.4;
+    securityScore = 0;
     securityReason = 'Security scan pending / unverified';
   } else if (security.status === 'FAIL') {
     securityScore = 0;
@@ -121,7 +121,7 @@ export function calculateOpportunityScore(params: ScoreInputParams): Opportunity
     securityScore = isClean ? weights.security : weights.security * 0.85;
     securityReason = isClean ? 'All critical security checks passed (Clean contract & mint revoked)' : 'Security passed with standard checks';
   } else {
-    securityScore = weights.security * 0.4;
+    securityScore = 0;
     securityReason = 'Unknown security properties';
   }
   securityScore = Math.min(weights.security, Math.max(0, Math.round(securityScore * 10) / 10));
@@ -226,6 +226,6 @@ export function calculateOpportunityScore(params: ScoreInputParams): Opportunity
     mode,
     breakdown,
     calculatedAt: now,
-    isHighPriority: totalScore >= DEFAULT_THRESHOLDS.highPriorityScoreThreshold && security?.status !== 'FAIL',
+    isHighPriority: totalScore >= DEFAULT_THRESHOLDS.highPriorityScoreThreshold && security?.status === 'PASS',
   };
 }

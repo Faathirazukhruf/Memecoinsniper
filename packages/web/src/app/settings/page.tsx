@@ -36,7 +36,7 @@ export default function SettingsPage() {
 
         {saved && (
           <div className="rounded-lg bg-emerald-950/60 border border-emerald-500/40 px-3 py-1.5 text-xs font-mono text-emerald-400">
-            Settings updated successfully!
+            Preview only — changes are not saved to the engine.
           </div>
         )}
       </div>
@@ -59,7 +59,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="text-xs font-mono text-gray-400">
-              Status: <span className="text-emerald-400 font-bold">ONLINE</span>
+              Status: <span className="text-emerald-400 font-bold">{c.isConnected ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
             <div className="text-xs font-mono text-gray-400">
               Events Processed: <span className="text-white font-bold">{c.eventsProcessed}</span>

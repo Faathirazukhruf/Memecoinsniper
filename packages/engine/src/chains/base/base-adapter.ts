@@ -144,19 +144,6 @@ export class BaseAdapter extends BaseChainAdapter {
   }
 
   async checkSecurity(tokenAddress: string): Promise<SecurityReport> {
-    return evaluateSecurity({
-      tokenAddress,
-      chainId: 'base',
-      isHoneypot: false,
-      buyTaxPercentage: 0,
-      sellTaxPercentage: 0,
-      isMintable: false,
-      isFreezable: false,
-      isOwnershipRenounced: true,
-      isLpLockedOrBurned: true,
-      lpLockedPercentage: 100,
-      top10HoldersSharePercentage: 16.0,
-      hasBlacklist: false,
-    });
+    return evaluateSecurity({ tokenAddress, chainId: this.chainId });
   }
 }

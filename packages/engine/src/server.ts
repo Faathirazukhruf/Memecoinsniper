@@ -1,8 +1,10 @@
+import { config } from './config/env.js';
 import express, { Express } from 'express';
 import cors from 'cors';
 import {
   ChainId,
   JournalTrade,
+  summarizeTrades,
   OpportunityMode,
   SUPPORTED_CHAINS,
   WalletProfile,
@@ -29,7 +31,8 @@ export function createServer(
     }));
 
     res.json({
-      status: 'online',
+      status: config.demoMode ? 'demo' : 'online',
+      mode: config.demoMode ? 'demo' : 'live',
       version: '1.0.0',
       cloudDbConnected: db.isCloudConnected(),
       timestamp: Date.now(),
@@ -150,13 +153,7 @@ export function createServer(
       const metrics = await db.getWalletMetrics(chainId as ChainId, address);
 
       res.json({
-        wallet: wallet || {
-          address,
-          chainId,
-          label: 'Tracked Wallet',
-          category: 'SMART_TRADER',
-          smartScore: 80,
-        },
+        wallet,
         metrics,
         trades,
       });
@@ -234,34 +231,20 @@ export function createServer(
     try {
       const trades = await db.listTrades();
       const closed = trades.filter((t) => t.status === 'CLOSED');
-      const winning = closed.filter((t) => (t.realizedPnlUsd || 0) > 0);
-      const losing = closed.filter((t) => (t.realizedPnlUsd || 0) < 0);
-
-      const totalInvested = trades.reduce((acc, t) => acc + (t.positionSizeUsd || 0), 0);
-      const totalPnl = closed.reduce((acc, t) => acc + (t.realizedPnlUsd || 0), 0);
-      const winRate = closed.length > 0 ? winning.length / closed.length : 0;
-
-      const totalGains = winning.reduce((acc, t) => acc + (t.realizedPnlUsd || 0), 0);
-      const totalLosses = Math.abs(losing.reduce((acc, t) => acc + (t.realizedPnlUsd || 0), 0));
-      const profitFactor = totalLosses > 0 ? totalGains / totalLosses : totalGains > 0 ? 99 : 0;
-
-      const multiples = closed.map((t) => t.roiMultiple || 1);
-      const avgRoiMultiple = multiples.length > 0 ? multiples.reduce((a, b) => a + b, 0) / multiples.length : 1;
+      const summary = summarizeTrades(trades);
+      const totalInvested = trades.reduce((sum, trade) => sum + (trade.positionSizeUsd || 0), 0);
+      const multiples = closed.map(t => t.roiMultiple).filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+      const avgRoiMultiple = multiples.length > 0 ? multiples.reduce((a, b) => a + b, 0) / multiples.length : null;
 
       res.json({
         metrics: {
           totalTrades: trades.length,
           openTrades: trades.filter((t) => t.status === 'OPEN').length,
-          closedTrades: closed.length,
-          winningTrades: winning.length,
-          losingTrades: losing.length,
-          winRate: Math.round(winRate * 1000) / 1000,
-          totalPnlUsd: Math.round(totalPnl * 100) / 100,
+          ...summary,
           totalInvestedUsd: Math.round(totalInvested),
-          profitFactor: Math.round(profitFactor * 100) / 100,
-          avgRoiMultiple: Math.round(avgRoiMultiple * 100) / 100,
-          bestTradeMultiple: multiples.length > 0 ? Math.max(...multiples) : 1,
-          worstTradeMultiple: multiples.length > 0 ? Math.min(...multiples) : 1,
+          avgRoiMultiple: avgRoiMultiple === null ? null : Math.round(avgRoiMultiple * 100) / 100,
+          bestTradeMultiple: multiples.length > 0 ? Math.max(...multiples) : null,
+          worstTradeMultiple: multiples.length > 0 ? Math.min(...multiples) : null,
         },
       });
     } catch (err) {
@@ -271,6 +254,7 @@ export function createServer(
 
   // Seed / Simulation trigger for testing any chain
   app.post('/api/simulate', async (req, res) => {
+    if (!config.demoMode) return res.status(403).json({ error: 'Simulation requires DEMO_MODE=true' });
     try {
       const chainId = (req.body.chainId as ChainId) || 'solana';
       const symbol = (req.body.symbol as string) || 'PEPE';

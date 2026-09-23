@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { DataModeBanner } from '@/components/DataModeBanner';
 import { Navigation } from '@/components/Navigation';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="min-h-screen bg-background text-gray-100 flex flex-col font-sans antialiased selection:bg-accent-blue/30 selection:text-white">
         <Navigation />
+        <DataModeBanner />
         <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
           {children}
         </main>

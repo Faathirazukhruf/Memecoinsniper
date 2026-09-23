@@ -144,19 +144,6 @@ export class BscAdapter extends BaseChainAdapter {
   }
 
   async checkSecurity(tokenAddress: string): Promise<SecurityReport> {
-    return evaluateSecurity({
-      tokenAddress,
-      chainId: 'bsc',
-      isHoneypot: false,
-      buyTaxPercentage: 1.0,
-      sellTaxPercentage: 1.5,
-      isMintable: false,
-      isFreezable: false,
-      isOwnershipRenounced: true,
-      isLpLockedOrBurned: true,
-      lpLockedPercentage: 99,
-      top10HoldersSharePercentage: 22.0,
-      hasBlacklist: false,
-    });
+    return evaluateSecurity({ tokenAddress, chainId: this.chainId });
   }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Signal, SUPPORTED_CHAINS } from '@memesniper/shared';
-import { fetchSignals, getEventStreamUrl, triggerSimulation } from '@/lib/api';
+import { fetchHealth, fetchSignals, getEventStreamUrl, triggerSimulation } from '@/lib/api';
 import { OpportunityScoreBadge } from '@/components/OpportunityScoreBadge';
 import { SecurityBadge } from '@/components/SecurityBadge';
 import {
@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const [demoMode, setDemoMode] = useState(false);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   const loadData = async () => {
     try {
-      const s = await fetchSignals();
+      const [s, health] = await Promise.all([fetchSignals(), fetchHealth()]);
+      setDemoMode(health.status === 'demo');
       setSignals(s);
     } catch (e) {
       console.error(e);
@@ -43,7 +45,7 @@ export default function DashboardPage() {
       eventSource.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload.type === 'signal' && payload.data) {
+          if (payload.type === 'SIGNAL' && payload.data) {
             setSignals((prev) => {
               const exists = prev.some((s) => s.id === payload.data.id || (s.tokenAddress === payload.data.tokenAddress && s.chainId === payload.data.chainId));
               if (exists) {
@@ -259,13 +261,14 @@ export default function DashboardPage() {
 
           <div className="rounded-xl border border-surface-border bg-surface p-4 space-y-3">
             <p className="text-xs text-gray-400">
-              Test real-time multi-chain pipeline (Event → Radar → Security → Scoring → UI / Telegram):
+              {demoMode ? 'Simulated events only. Telegram alerts are disabled.' : 'Simulation is disabled in live mode.'}
             </p>
 
             <div className="grid grid-cols-3 gap-2">
               <button
+                disabled={!demoMode}
                 onClick={async () => {
-                  await triggerSimulation('solana', 'SOLMEME');
+                  await triggerSimulation('solana', 'SOLMEME').catch(err => alert(err.message));
                   await loadData();
                 }}
                 className="rounded-lg bg-surface-elevated hover:bg-surface-border border border-surface-border p-2 text-center text-xs font-mono text-emerald-400 transition-colors"
@@ -273,8 +276,9 @@ export default function DashboardPage() {
                 + SOL Pool
               </button>
               <button
+                disabled={!demoMode}
                 onClick={async () => {
-                  await triggerSimulation('bsc', 'BSCDOGE');
+                  await triggerSimulation('bsc', 'BSCDOGE').catch(err => alert(err.message));
                   await loadData();
                 }}
                 className="rounded-lg bg-surface-elevated hover:bg-surface-border border border-surface-border p-2 text-center text-xs font-mono text-amber-400 transition-colors"
@@ -282,8 +286,9 @@ export default function DashboardPage() {
                 + BSC Pool
               </button>
               <button
+                disabled={!demoMode}
                 onClick={async () => {
-                  await triggerSimulation('base', 'BASEFROG');
+                  await triggerSimulation('base', 'BASEFROG').catch(err => alert(err.message));
                   await loadData();
                 }}
                 className="rounded-lg bg-surface-elevated hover:bg-surface-border border border-surface-border p-2 text-center text-xs font-mono text-blue-400 transition-colors"
