@@ -46,13 +46,14 @@ async function bootstrap() {
   const walletRadar = new WalletRadar();
   const tokenRadar = new TokenRadar(marketService, scoringService, telegramNotifier, walletRadar);
   const liveMarketFeed = new LiveMarketFeedService();
+  walletRadar.start();
 
   // 3. Bind Chain Adapter Events to Radars
   for (const [chainId, adapter] of adapters.entries()) {
     adapter.on('event', async (event) => {
       try {
         if (event.type.startsWith('WALLET_')) {
-          await walletRadar.processWalletActivity(event as any);
+          // Wallet Radar reads and validates its own RPC history; do not ingest synthetic adapter events.
         } else {
           await tokenRadar.processEvent(event);
         }
@@ -95,6 +96,7 @@ async function bootstrap() {
     console.log('\n[Engine] Gracefully shutting down...');
     server.close();
     liveMarketFeed.stop();
+    await walletRadar.stop();
     for (const adapter of adapters.values()) {
       await adapter.stop();
     }

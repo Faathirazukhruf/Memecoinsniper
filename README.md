@@ -15,6 +15,8 @@ Live mode is the default (`DEMO_MODE=false`). Synthetic startup tokens and examp
 
 Security failures and missing evidence remain `UNKNOWN`; only `PASS` reports can generate Telegram alerts. Pool-specific lock verification is not implemented, so live reports may remain `UNKNOWN` and alerts are intentionally suppressed. Analytics use recorded journal results, with missing data shown explicitly.
 
+Wallet Radar now supports persistent local watchlists, RPC sync, observed activity, FIFO positions and measured gross PnL. See [Wallet Radar scope and setup](docs/WALLET_INTELLIGENCE.md) for supported transactions and valuation limits.
+
 This is still a research prototype: chain decoding, market estimates, durable journal recovery, and strategy validation require further work before real-money use.
 
 ## 🎯 Product Vision & Philosophy

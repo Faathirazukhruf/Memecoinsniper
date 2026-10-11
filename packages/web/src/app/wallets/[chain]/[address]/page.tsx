@@ -1,170 +1,269 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ChainId, SUPPORTED_CHAINS } from '@memesniper/shared';
-import { fetchWalletDetail } from '@/lib/api';
-import {
-  ArrowLeft,
-  TrendingUp,
-  ExternalLink,
-} from 'lucide-react';
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ChainId, SUPPORTED_CHAINS, WalletDetail } from "@memesniper/shared";
+import { fetchWalletDetail, syncWallet } from "@/lib/api";
 
 export default function WalletDetailPage() {
-  const params = useParams();
-  const chainId = (params.chain as ChainId) || 'solana';
-  const address = (params.address as string) || '';
-
-  const [error, setError] = useState(false);
-  const [data, setData] = useState<any>(null);
-
-  useEffect(() => {
-    async function load() {
-      const res = await fetchWalletDetail(chainId, address).catch(() => null);
-      if (!res) { setError(true); return; }
-      setError(false);
-      setData(res);
+  const params = useParams(),
+    chain = params.chain as ChainId,
+    address = params.address as string;
+  const [data, setData] = useState<WalletDetail | null>(null),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  const [limit, setLimit] = useState(100);
+  const load = useCallback(async () => {
+    try {
+      setData(await fetchWalletDetail(chain, address));
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
     }
-    load();
-  }, [chainId, address]);
-
-  const chainConfig = SUPPORTED_CHAINS[chainId] || SUPPORTED_CHAINS.solana;
-  const wallet = data?.wallet;
-  const metrics = data?.metrics;
-
-  if (error) return <p role="alert">Wallet data unavailable.</p>;
+  }, [chain, address]);
+  useEffect(() => {
+    setData(null);
+    void load();
+    const timer = setInterval(() => void load(), 10000);
+    return () => clearInterval(timer);
+  }, [load]);
+  const money = (value: number | null | undefined) =>
+    value == null
+      ? "—"
+      : value.toLocaleString(undefined, {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 2,
+        });
+  if (!data)
+    return (
+      <div className="space-y-4">
+        <Link href="/wallets">← Wallet Radar</Link>
+        <p role={error ? "alert" : "status"}>{error || "Loading wallet…"}</p>
+        {error && <button onClick={() => void load()}>Retry</button>}
+      </div>
+    );
+  const { wallet, metrics, positions, movements, trades } = data;
+  const pnl = new Map(trades.map((t) => [t.id, t.realizedPnlUsd]));
+  const explorer = SUPPORTED_CHAINS[chain].explorerUrl;
   return (
     <div className="space-y-6">
-      <Link
-        href="/wallets"
-        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white font-mono transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span>Back to Wallet Radar</span>
+      <Link className="text-accent-blue text-sm" href="/wallets">
+        ← Wallet Radar
       </Link>
-
-      {/* Wallet Summary Card */}
-      <div className="rounded-xl border border-surface-border bg-surface p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-blue/10 border border-accent-blue/30 text-accent-blue font-mono font-bold text-xl">
-              {wallet?.smartScore ?? '—'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">
-                  {wallet?.label || 'Smart Trader Profile'}
-                </h1>
-                <span className="rounded bg-surface-elevated px-2 py-0.5 text-xs font-mono uppercase text-gray-300 border border-surface-border">
-                  {chainConfig.name}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 font-mono mt-0.5">
-                {address}
-              </p>
-            </div>
-          </div>
-
-          <a
-            href={`${chainConfig.explorerUrl}/address/${address}`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-lg bg-surface-elevated hover:bg-surface-border border border-surface-border px-3.5 py-1.5 text-xs text-white font-mono transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+      <header className="rounded-xl bg-surface border border-surface-border p-6 space-y-3">
+        <div className="flex flex-wrap justify-between gap-3">
+          <h1 className="text-xl font-bold">
+            {wallet.label || "Tracked wallet"} · {chain.toUpperCase()}
+          </h1>
+          <button
+            disabled={
+              busy || !wallet.isWatchlisted || wallet.sync.status === "SYNCING"
+            }
+            className="bg-accent-blue rounded px-4 py-2 disabled:opacity-40"
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await syncWallet(chain, address);
+                await load();
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
           >
-            <span>Explorer</span>
-            <ExternalLink className="h-3.5 w-3.5 text-gray-400" />
-          </a>
+            Sync now
+          </button>
         </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 pt-4 border-t border-surface-border/50 text-xs font-mono">
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">WIN RATE</span>
-            <span className="text-emerald-400 font-bold text-sm">
-              {metrics ? Math.round(metrics.winRate * 100) : '—'}%
-            </span>
+        <a
+          target="_blank"
+          rel="noreferrer"
+          className="font-mono text-xs break-all text-accent-blue"
+          href={explorer + "/address/" + address}
+        >
+          {address} ↗
+        </a>
+        <p className="text-sm">
+          {wallet.sync.status} · Last successful sync:{" "}
+          {wallet.sync.lastSyncedAt
+            ? new Date(wallet.sync.lastSyncedAt).toLocaleString()
+            : "never"}
+        </p>
+        <p className="text-xs text-gray-400">{wallet.sync.coverage}</p>
+        {(error || wallet.sync.error) && (
+          <p role="alert" className="text-red-300">
+            {error || wallet.sync.error}
+          </p>
+        )}
+      </header>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          [
+            "SMART SCORE",
+            wallet.measuredExits ? metrics.smartScore + "/100" : "Unrated",
+          ],
+          ["MEASURED EXITS", String(wallet.measuredExits)],
+          [
+            "GROSS REALIZED PNL",
+            wallet.measuredExits ? money(metrics.realizedPnlUsd) : "—",
+          ],
+          [
+            "WIN RATE",
+            wallet.measuredExits
+              ? (metrics.winRate * 100).toFixed(1) + "%"
+              : "—",
+          ],
+          ["PROFIT FACTOR", metrics.profitFactor?.toFixed(2) ?? "—"],
+          ["OBSERVED SWAPS", String(metrics.totalTrades)],
+          [
+            "EVIDENCE CONFIDENCE",
+            (metrics.confidenceScore * 100).toFixed(0) + "%",
+          ],
+          [
+            "UNPRICED MOVEMENTS",
+            String(movements.filter((m) => m.usdValue === null).length),
+          ],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="rounded-xl bg-surface border border-surface-border p-4"
+          >
+            <span className="text-xs text-gray-400">{label}</span>
+            <div className="text-xl font-mono mt-2">{value}</div>
           </div>
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">AVG MULTIPLE</span>
-            <span className="text-cyan-400 font-bold text-sm">
-              {metrics?.avgRoiMultiple ?? '—'}x
-            </span>
-          </div>
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">PROFIT FACTOR</span>
-            <span className="text-white font-bold text-sm">
-              {metrics?.profitFactor ?? '—'}
-            </span>
-          </div>
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">TOTAL TRADES</span>
-            <span className="text-white font-bold text-sm">
-              {metrics?.totalTrades ?? '—'}
-            </span>
-          </div>
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">EARLY ENTRY RATE</span>
-            <span className="text-emerald-400 font-bold text-sm">
-              {metrics ? Math.round(metrics.earlyEntryRate * 100) : '—'}%
-            </span>
-          </div>
-          <div className="rounded-lg bg-surface-elevated p-3 border border-surface-border">
-            <span className="text-gray-500 block text-[10px]">BEST TRADE</span>
-            <span className="text-accent-cyan font-bold text-sm">
-              {metrics?.bestTradeMultiple ?? '—'}x
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
-
-      {/* Historical Trades Timeline */}
-      <div className="rounded-xl border border-surface-border bg-surface p-6 shadow-xl space-y-4">
-        <h2 className="text-base font-bold text-white flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-accent-blue" />
-          <span>Historical Trade Reconstructions</span>
+      <p className="text-xs text-gray-400">
+        PnL uses FIFO for observed USDC-settled swaps at $1 per USDC and
+        excludes gas. Transfers, missing entry history, and unpriced swaps do
+        not count as measured exits. Confidence reflects sample size, not
+        probability of profit. Twenty measured exits are required for
+        smart-wallet confluence.
+      </p>
+      <section className="rounded-xl bg-surface border border-surface-border p-5">
+        <h2 className="font-bold mb-3">
+          Positions reconstructed from observed history
         </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead className="border-b border-surface-border bg-surface-elevated text-gray-400 uppercase text-[10px]">
-              <tr>
-                <th className="py-2.5 px-3">Token</th>
-                <th className="py-2.5 px-3">Type</th>
-                <th className="py-2.5 px-3">Position ($)</th>
-                <th className="py-2.5 px-3">Multiple</th>
-                <th className="py-2.5 px-3">PnL ($)</th>
-                <th className="py-2.5 px-3">Hold Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-border/50 text-gray-200">
-              <tr className="hover:bg-surface-elevated/40">
-                <td className="py-3 px-3 font-bold text-white">$SOLCAT</td>
-                <td className="py-3 px-3 text-emerald-400">BUY</td>
-                <td className="py-3 px-3">$1,200</td>
-                <td className="py-3 px-3 text-cyan-400 font-bold">5.4x</td>
-                <td className="py-3 px-3 text-emerald-400 font-bold">+$5,280</td>
-                <td className="py-3 px-3 text-gray-400">45 mins</td>
-              </tr>
-              <tr className="hover:bg-surface-elevated/40">
-                <td className="py-3 px-3 font-bold text-white">$BASEFROG</td>
-                <td className="py-3 px-3 text-emerald-400">BUY</td>
-                <td className="py-3 px-3">$850</td>
-                <td className="py-3 px-3 text-cyan-400 font-bold">3.8x</td>
-                <td className="py-3 px-3 text-emerald-400 font-bold">+$2,380</td>
-                <td className="py-3 px-3 text-gray-400">1.2 hrs</td>
-              </tr>
-              <tr className="hover:bg-surface-elevated/40">
-                <td className="py-3 px-3 font-bold text-white">$BNBDOGE</td>
-                <td className="py-3 px-3 text-emerald-400">BUY</td>
-                <td className="py-3 px-3">$1,500</td>
-                <td className="py-3 px-3 text-red-400 font-bold">0.85x</td>
-                <td className="py-3 px-3 text-red-400 font-bold">-$225</td>
-                <td className="py-3 px-3 text-gray-400">18 mins</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <p className="text-xs text-gray-400 mb-3">
+          These are not a full wallet balance snapshot. Holdings acquired before
+          the coverage window are absent.
+        </p>
+        {positions.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr>
+                  <th className="p-2">Token address</th>
+                  <th className="p-2">Observed quantity</th>
+                  <th className="p-2">Known cost basis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {positions.map((p) => (
+                  <tr
+                    key={p.tokenAddress}
+                    className="border-t border-surface-border"
+                  >
+                    <td className="p-2 font-mono break-all">
+                      {p.tokenAddress}
+                    </td>
+                    <td className="p-2">
+                      {p.quantity.toLocaleString(undefined, {
+                        maximumSignificantDigits: 8,
+                      })}
+                    </td>
+                    <td className="p-2">{money(p.costBasisUsd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">
+            No remaining positions in observed history.
+          </p>
+        )}
+      </section>
+      <section className="rounded-xl bg-surface border border-surface-border p-5">
+        <h2 className="font-bold mb-3">
+          On-chain activity ({movements.length})
+        </h2>
+        {!movements.length ? (
+          <p className="text-sm text-gray-400">
+            No supported token movements found yet. Check sync status and
+            coverage above.
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr>
+                    {[
+                      "Time",
+                      "Type",
+                      "Token",
+                      "Quantity",
+                      "USD settlement",
+                      "Realized PnL",
+                      "Transaction",
+                    ].map((h) => (
+                      <th key={h} className="p-2">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.slice(0, limit).map((m) => (
+                    <tr key={m.id} className="border-t border-surface-border">
+                      <td className="p-2 whitespace-nowrap">
+                        {new Date(m.timestamp).toLocaleString()}
+                      </td>
+                      <td className="p-2">
+                        {m.kind === "SWAP"
+                          ? m.direction === "IN"
+                            ? "BUY"
+                            : "SELL"
+                          : "TRANSFER " + m.direction}
+                      </td>
+                      <td className="p-2 font-mono" title={m.tokenAddress}>
+                        {m.tokenSymbol}
+                      </td>
+                      <td className="p-2">
+                        {m.quantity.toLocaleString(undefined, {
+                          maximumSignificantDigits: 8,
+                        })}
+                      </td>
+                      <td className="p-2">{money(m.usdValue)}</td>
+                      <td className="p-2">{money(pnl.get(m.id))}</td>
+                      <td className="p-2">
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-blue"
+                          href={explorer + "/tx/" + m.txHash}
+                        >
+                          View ↗
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {limit < movements.length && (
+              <button
+                className="mt-4 text-accent-blue"
+                onClick={() => setLimit(limit + 100)}
+              >
+                Load 100 more
+              </button>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }

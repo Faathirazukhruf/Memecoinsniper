@@ -68,7 +68,7 @@ export const config: EngineConfig = {
     },
     bsc: {
       enabled: process.env.BSC_ENABLED !== 'false',
-      rpcUrl: process.env.BSC_RPC_URL || 'https://binance.llamarpc.com',
+      rpcUrl: process.env.BSC_RPC_URL || 'https://bsc-rpc.publicnode.com',
       wsUrl: process.env.BSC_WS_URL || 'wss://bsc-rpc.publicnode.com',
     },
     base: {

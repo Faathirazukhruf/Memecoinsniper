@@ -1,16 +1,16 @@
-import { ChainId } from './chain';
+import { ChainId } from "./chain";
 
 export type WalletCategory =
-  | 'SMART_TRADER'
-  | 'ORDINARY_TRADER'
-  | 'DEPLOYER'
-  | 'DEVELOPER'
-  | 'LP_PROVIDER'
-  | 'EXCHANGE'
-  | 'MARKET_MAKER'
-  | 'BOT'
-  | 'TREASURY'
-  | 'UNKNOWN';
+  | "SMART_TRADER"
+  | "ORDINARY_TRADER"
+  | "DEPLOYER"
+  | "DEVELOPER"
+  | "LP_PROVIDER"
+  | "EXCHANGE"
+  | "MARKET_MAKER"
+  | "BOT"
+  | "TREASURY"
+  | "UNKNOWN";
 
 export interface WalletProfile {
   address: string;
@@ -50,9 +50,9 @@ export interface WalletMetrics {
   winRate: number;
   avgRoiMultiple: number;
   medianRoiMultiple: number;
-  profitFactor: number;
+  profitFactor: number | null;
   realizedPnlUsd: number;
-  earlyEntryRate: number;
+  earlyEntryRate: number | null;
   avgHoldTimeSeconds: number;
   avgPositionSizeUsd: number;
   bestTradeMultiple: number;
@@ -62,4 +62,48 @@ export interface WalletMetrics {
   smartScore: number;
   confidenceScore: number;
   updatedAt: number;
+}
+
+/** A chain-observed asset movement. USD uses observed USDC settlement at $1 par, excluding gas. */
+export interface WalletMovement {
+  id: string;
+  tokenAddress: string;
+  tokenSymbol: string;
+  quantity: number;
+  balanceBefore?: number;
+  direction: "IN" | "OUT";
+  kind: "SWAP" | "TRANSFER";
+  usdValue: number | null;
+  quoteSymbol?: string;
+  quoteAmount?: number;
+  txHash: string;
+  timestamp: number;
+  order: number;
+}
+export interface WalletPosition {
+  tokenAddress: string;
+  tokenSymbol: string;
+  quantity: number;
+  costBasisUsd: number | null;
+}
+export interface WalletSyncState {
+  status: "PENDING" | "SYNCING" | "READY" | "ERROR" | "PAUSED";
+  cursor?: string;
+  lastSyncedAt?: number;
+  error?: string;
+  coverage: string;
+}
+export interface TrackedWallet extends WalletProfile {
+  sync: WalletSyncState;
+  measuredExits: number;
+}
+export interface WalletDetail {
+  wallet: TrackedWallet;
+  movements: WalletMovement[];
+  trades: WalletTrade[];
+  positions: WalletPosition[];
+  metrics: WalletMetrics;
+}
+export function walletKey(chain: ChainId, address: string): string {
+  return chain + ":" + (chain === "solana" ? address : address.toLowerCase());
 }

@@ -7,12 +7,11 @@ import {
   summarizeTrades,
   OpportunityMode,
   SUPPORTED_CHAINS,
-  WalletProfile,
 } from '@memesniper/shared';
 import { db } from './db/supabase.js';
 import { BaseChainAdapter } from './chains/base/chain-adapter.js';
 import { TokenRadar } from './radars/token-radar.js';
-import { WalletRadar } from './radars/wallet-radar.js';
+import { WalletRadar, WalletInputError, validateWallet } from './radars/wallet-radar.js';
 
 export function createServer(
   adapters: Map<ChainId, BaseChainAdapter>,
@@ -111,55 +110,51 @@ export function createServer(
     }
   });
 
-  // Wallets endpoint
+  // Wallet Radar uses durable local storage independently of the journal database.
   app.get('/api/wallets', async (_req, res) => {
-    try {
-      const wallets = await db.listWallets();
-      res.json({ wallets });
-    } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
-    }
+    try { res.json({ wallets: await walletRadar.getTrackedWallets() }); }
+    catch { res.status(500).json({error:'Wallet storage unavailable'}); }
   });
-
-  app.post('/api/wallets', async (req, res) => {
+  app.post('/api/wallets', async (req,res) => {
     try {
-      const body = req.body as WalletProfile;
-      if (!body.address || !body.chainId) {
-        return res.status(400).json({ error: 'address and chainId are required' });
-      }
-      const profile: WalletProfile = {
-        address: body.address,
-        chainId: body.chainId,
-        label: body.label || 'Custom Tracked Wallet',
-        category: body.category || 'SMART_TRADER',
-        isWatchlisted: true,
-        smartScore: body.smartScore || 75,
-        notes: body.notes || '',
-        firstSeenAt: Date.now(),
-        lastActiveAt: Date.now(),
-      };
-      await walletRadar.trackWallet(profile);
-      res.status(201).json(profile);
-    } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
-    }
+      const wallet=await walletRadar.trackWallet(req.body ?? {});
+      res.status(201).json(wallet);
+      void walletRadar.sync(wallet.chainId,wallet.address).catch(err=>console.error('[Wallet sync]',err.message));
+    } catch(err) { res.status(err instanceof WalletInputError?400:500).json({error:err instanceof WalletInputError?err.message:'Could not save wallet'}); }
   });
-
-  app.get('/api/wallets/:chainId/:address', async (req, res) => {
+  app.get('/api/wallets/:chainId/:address', (req,res) => {
     try {
-      const { chainId, address } = req.params;
-      const wallet = await db.getWallet(chainId as ChainId, address);
-      const trades = await db.listWalletTrades(address);
-      const metrics = await db.getWalletMetrics(chainId as ChainId, address);
-
-      res.json({
-        wallet,
-        metrics,
-        trades,
-      });
-    } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
-    }
+      const {chainId,address}=validateWallet(req.params.chainId,req.params.address);
+      const detail=walletRadar.getDetail(chainId,address);
+      if(!detail) return res.status(404).json({error:'Wallet not tracked'});
+      res.json(detail);
+    } catch(err) { res.status(err instanceof WalletInputError?400:500).json({error:(err as Error).message}); }
+  });
+  app.post('/api/wallets/:chainId/:address/sync', (req,res) => {
+    try {
+      const {chainId,address}=validateWallet(req.params.chainId,req.params.address);
+      const detail=walletRadar.getDetail(chainId,address);
+      if(!detail) return res.status(404).json({error:'Wallet not tracked'});
+      if(!detail.wallet.isWatchlisted) return res.status(409).json({error:'Resume this wallet before syncing'});
+      if(config.demoMode) return res.status(409).json({error:'Live wallet sync is disabled in demo mode'});
+      void walletRadar.sync(chainId,address).catch(err=>console.error('[Wallet sync]',err.message));
+      res.status(202).json({success:true});
+    } catch(err) { res.status(err instanceof WalletInputError?400:500).json({error:(err as Error).message}); }
+  });
+  app.patch('/api/wallets/:chainId/:address', (req,res) => {
+    try {
+      const {chainId,address}=validateWallet(req.params.chainId,req.params.address);
+      if(typeof req.body?.paused!=='boolean') return res.status(400).json({error:'paused must be a boolean'});
+      if(!walletRadar.setPaused(chainId,address,req.body.paused)) return res.status(404).json({error:'Wallet not tracked'});
+      res.json({success:true});
+    } catch(err) { res.status(err instanceof WalletInputError?400:500).json({error:(err as Error).message}); }
+  });
+  app.delete('/api/wallets/:chainId/:address', (req,res) => {
+    try {
+      const {chainId,address}=validateWallet(req.params.chainId,req.params.address);
+      if(!walletRadar.remove(chainId,address)) return res.status(404).json({error:'Wallet not tracked'});
+      res.json({success:true});
+    } catch(err) { res.status(err instanceof WalletInputError?400:500).json({error:(err as Error).message}); }
   });
 
   // Trade Journal endpoints

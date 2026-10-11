@@ -5,9 +5,8 @@ import {
   SecurityReport,
   Signal,
   TokenEntity,
-  WalletMetrics,
-  WalletProfile,
-  WalletTrade,
+  WalletDetail,
+  TrackedWallet,
 } from '@memesniper/shared';
 
 const ENGINE_URL = process.env.NEXT_PUBLIC_ENGINE_API_URL || 'http://localhost:3001';
@@ -70,38 +69,31 @@ export async function fetchTokenDetail(
   }
 }
 
-export async function fetchWallets(): Promise<WalletProfile[]> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/wallets`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch wallets');
-    const data = await res.json();
-    return data.wallets || [];
-  } catch {
-    return [];
-  }
+async function walletRequest<T>(route: string, options?: RequestInit): Promise<T> {
+  let response: Response;
+  try { response=await fetch(ENGINE_URL+'/api/wallets'+route,{...options,cache:'no-store',signal:AbortSignal.timeout(20000),headers:{'Content-Type':'application/json'}}); }
+  catch { throw new Error('Wallet service unavailable. Check the engine connection and retry.'); }
+  const data=await response.json();
+  if(!response.ok) throw new Error(data.error || 'Wallet request failed');
+  return data;
 }
-
-export async function addTrackedWallet(wallet: Partial<WalletProfile>): Promise<WalletProfile> {
-  const res = await fetch(`${ENGINE_URL}/api/wallets`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(wallet),
-  });
-  if (!res.ok) throw new Error('Failed to add wallet');
-  return await res.json();
+export async function fetchWallets():Promise<TrackedWallet[]> {
+  return (await walletRequest<{wallets:TrackedWallet[]}>('')).wallets;
 }
-
-export async function fetchWalletDetail(
-  chainId: ChainId,
-  address: string
-): Promise<{ wallet: WalletProfile | null; metrics: WalletMetrics | null; trades: WalletTrade[] }> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/wallets/${chainId}/${address}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed');
-    return await res.json();
-  } catch {
-    throw new Error('Wallet data unavailable');
-  }
+export function addTrackedWallet(wallet:{address:string;chainId:ChainId;label?:string;notes?:string}):Promise<TrackedWallet> {
+  return walletRequest('',{method:'POST',body:JSON.stringify(wallet)});
+}
+export function fetchWalletDetail(chain:ChainId,address:string):Promise<WalletDetail> {
+  return walletRequest('/'+chain+'/'+encodeURIComponent(address));
+}
+export function syncWallet(chain:ChainId,address:string):Promise<{success:boolean}> {
+  return walletRequest('/'+chain+'/'+encodeURIComponent(address)+'/sync',{method:'POST'});
+}
+export function pauseWallet(chain:ChainId,address:string,paused:boolean):Promise<{success:boolean}> {
+  return walletRequest('/'+chain+'/'+encodeURIComponent(address),{method:'PATCH',body:JSON.stringify({paused})});
+}
+export function deleteWallet(chain:ChainId,address:string):Promise<{success:boolean}> {
+  return walletRequest('/'+chain+'/'+encodeURIComponent(address),{method:'DELETE'});
 }
 
 export async function fetchJournal(): Promise<JournalTrade[]> {

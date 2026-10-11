@@ -26,7 +26,7 @@ export const SUPPORTED_CHAINS: Record<ChainId, ChainConfig> = {
       symbol: 'BNB',
       decimals: 18,
     },
-    rpcUrl: 'https://binance.llamarpc.com',
+    rpcUrl: 'https://bsc-rpc.publicnode.com',
     wsUrl: 'wss://bsc-rpc.publicnode.com',
     explorerUrl: 'https://bscscan.com',
     dexScreenerPrefix: 'bsc',
