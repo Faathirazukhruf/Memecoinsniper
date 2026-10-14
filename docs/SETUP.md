@@ -15,7 +15,8 @@ This guide walks you through setting up and running **Memecoinsniper** locally i
 ## 2. Clone & Install Dependencies
 
 ```bash
-# Navigate to the workspace
+# Clone the repository
+git clone https://github.com/Faathirazukhruf/Memecoinsniper.git
 cd Memecoinsniper
 
 # Install all monorepo package dependencies
@@ -26,14 +27,25 @@ pnpm install
 
 ## 3. Environment Configuration
 
-Copy `.env.example` to `.env`:
+Create `.env` from the provided example template:
 
-```bash
-cp .env.example .env
-```
+- **Linux / macOS / Git Bash:**
+  ```bash
+  cp .env.example .env
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  Copy-Item .env.example .env
+  ```
 
-### Essential Settings for Zero-Cost Local Operation:
-Out of the box, public RPC endpoints for Solana, BSC, and Base are pre-configured:
+> [!TIP]
+> **Recommended First Run: Use Demo Mode**
+> In `.env`, set `DEMO_MODE=true` during your initial setup. This seeds demo tokens and wallets into the web UI without consuming external RPC quotas or getting rate-limited by public endpoints. Once you are comfortable with the interface, switch to `DEMO_MODE=false`.
+>
+> For full details on all settings, see the [Configuration Guide](CONFIG_ENV.md).
+
+### Essential Public RPC Settings:
+Out of the box, public RPC endpoints for Solana, BSC, and Base are pre-configured in `.env.example`:
 
 ```env
 # Solana Mainnet Public RPC / WebSocket
@@ -49,26 +61,12 @@ BASE_RPC_URL=https://mainnet.base.org
 BASE_WS_URL=wss://base-rpc.publicnode.com
 ```
 
-### Optional Supabase Cloud Sync:
-If you have a Supabase project, populate:
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-*(If left empty, the engine automatically runs with its built-in in-memory fallback repository, requiring zero external cloud dependencies).*
+> [!NOTE]
+> During high market activity (e.g. Pump.fun surges), public Solana RPCs may return `429 Too Many Requests`. For live trading, obtain a free private RPC key from [Helius](https://www.helius.dev/) or [Alchemy](https://www.alchemy.com/).
 
-### Optional Telegram Alerts:
-To receive alerts in your Telegram chat:
-1. Message `@BotFather` on Telegram to create a bot and get a token.
-2. Message `@userinfobot` to get your Telegram `chat_id`.
-3. Set:
-```env
-TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ
-TELEGRAM_CHAT_ID=123456789
-TELEGRAM_ALERTS_ENABLED=true
-TELEGRAM_MIN_SCORE=80
-```
+### Optional Cloud & Alert Services:
+- **Supabase Cloud Sync:** If you leave Supabase keys blank, the engine automatically runs using its high-speed in-memory repository with zero external setup.
+- **Telegram Bot Alerts:** Message `@BotFather` to create a bot, set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `TELEGRAM_ALERTS_ENABLED=true`.
 
 ---
 
@@ -90,13 +88,25 @@ pnpm dev:engine
 pnpm dev:web
 ```
 
-- **Web Terminal:** [http://localhost:3000](http://localhost:3000)
-- **Engine Stream API:** [http://localhost:3001/api/health](http://localhost:3001/api/health)
+- **Web Terminal Cockpit:** [http://localhost:3000](http://localhost:3000)
+- **Engine Stream & API:** [http://localhost:3001/api/health](http://localhost:3001/api/health)
 
 ---
 
-## 5. Running Automated Unit Tests
+## 5. Running Automated Unit Tests & Typechecks
 
 ```bash
+# Run unit test suites (scoring, security, wallet metrics, normalization)
 pnpm test
+
+# Run TypeScript typechecks across all monorepo packages
+pnpm typecheck
 ```
+
+---
+
+## 6. Next Steps
+
+- Consult the [Operator Runbook](OPERATOR_RUNBOOK.md) for execution deep-links and risk management.
+- Check the [API Reference](API_REFERENCE.md) for REST and SSE stream specifications.
+- Read [Troubleshooting](TROUBLESHOOTING.md) if you encounter RPC rate limits or port collisions.

@@ -28,6 +28,18 @@ FIFO cost basis supports partial exits and remaining inventory. Incoming transfe
 
 Smart score is a ranking heuristic, not a probability of profit. Confidence is sample size capped at 20 measured exits. Smart confluence requires at least 20 measured exits, positive measured gross PnL, score >=65, an active wallet, READY sync state, a sync in the last two minutes, and remaining observed token inventory. Unpriced and missing history can materially bias measured results; do not treat a score as proof of lifetime profitability.
 
+### Smart Confluence Criteria Quick Reference
+
+| Requirement | Minimum Threshold | Purpose |
+| :--- | :--- | :--- |
+| **Measured Exits** | $\ge 20$ completed trades | Ensures statistical significance; eliminates lucky 1-hit wonders. |
+| **Gross Realized PnL** | $> \$0$ (Net positive) | Confirms historical profitability on measured USDC pairs. |
+| **Smart Score** | $\ge 65$ / $100$ | Composite score of win rate, profit factor, and consistency. |
+| **Operational Status** | Active (not paused) | Operator can pause suspicious or decaying wallets. |
+| **Sync State** | `READY` | RPC catch-up fully processed; no pending block batches. |
+| **Freshness** | Synced $\le 120$ seconds ago | Prevents stale signals from lagging RPCs. |
+| **Current Inventory** | $> 0$ remaining tokens | Wallet must still hold token balance to trigger buy confluence. |
+
 ## API
 
 - GET /api/wallets: tracked profiles and sync states.

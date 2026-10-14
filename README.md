@@ -114,13 +114,16 @@ pnpm test
 
 All detailed technical documentation is organized in the [`docs/`](file:///c:/Users/faath/Memecoinsniper/docs) folder:
 
-- [docs/ARCHITECTURE.md](file:///c:/Users/faath/Memecoinsniper/docs/ARCHITECTURE.md) — System design, dataflow pipelines, process model.
+- [docs/ARCHITECTURE.md](file:///c:/Users/faath/Memecoinsniper/docs/ARCHITECTURE.md) — System design, dataflow pipelines, process model, hybrid persistence.
+- [docs/API_REFERENCE.md](file:///c:/Users/faath/Memecoinsniper/docs/API_REFERENCE.md) — REST endpoints, Server-Sent Events (SSE) stream, and payload schemas.
+- [docs/CONFIG_ENV.md](file:///c:/Users/faath/Memecoinsniper/docs/CONFIG_ENV.md) — Complete environment variable reference and free RPC setups.
+- [docs/OPERATOR_RUNBOOK.md](file:///c:/Users/faath/Memecoinsniper/docs/OPERATOR_RUNBOOK.md) — Fast execution deep-links, slippage/MEV settings, and risk rules.
 - [docs/SETUP.md](file:///c:/Users/faath/Memecoinsniper/docs/SETUP.md) — Step-by-step local development and environment setup guide.
 - [docs/DEPLOYMENT.md](file:///c:/Users/faath/Memecoinsniper/docs/DEPLOYMENT.md) — Free/low-cost deployment strategies (Vercel, Supabase, VPS worker).
 - [docs/DATABASE.md](file:///c:/Users/faath/Memecoinsniper/docs/DATABASE.md) — PostgreSQL schema, migrations, indices, and data lifecycle.
 - [docs/CHAINS.md](file:///c:/Users/faath/Memecoinsniper/docs/CHAINS.md) — Multi-chain adapter specifications for Solana, BSC, Base.
 - [docs/WALLET_INTELLIGENCE.md](file:///c:/Users/faath/Memecoinsniper/docs/WALLET_INTELLIGENCE.md) — Wallet reconstruction, smart scores, metrics calculation.
 - [docs/SCORING.md](file:///c:/Users/faath/Memecoinsniper/docs/SCORING.md) — Mathematical Opportunity Scoring formula (0-100) and weight allocation.
-- [docs/SECURITY.md](file:///c:/Users/faath/Memecoinsniper/docs/SECURITY.md) — Security check rules, honeypot analysis, risk flags.
+- [docs/SECURITY.md](file:///c:/Users/faath/Memecoinsniper/docs/SECURITY.md) — Security check rules, honeypot analysis, risk flags, and blind spots.
 - [docs/TRADING_WORKFLOW.md](file:///c:/Users/faath/Memecoinsniper/docs/TRADING_WORKFLOW.md) — Operator trading routine, signal filtering, manual journal logging.
 - [docs/TROUBLESHOOTING.md](file:///c:/Users/faath/Memecoinsniper/docs/TROUBLESHOOTING.md) — RPC rate limits, WebSocket disconnects, common solutions.
